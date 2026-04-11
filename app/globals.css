@@ -5,6 +5,19 @@
   --font-mono: var(--font-jetbrains-mono);
 }
 
+:root {
+  --background: #0a0a0a;
+  --foreground: #f5f5f5;
+  --card: #171717;
+  --card-foreground: #f5f5f5;
+  --border: #262626;
+  --primary: #818cf8;
+  --primary-foreground: #0a0a0a;
+  --secondary: #262626;
+  --secondary-foreground: #f5f5f5;
+  --muted-foreground: #a3a3a3;
+}
+
 ::selection {
   background-color: rgb(99 102 241 / 0.3);
 }
