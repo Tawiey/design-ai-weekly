@@ -14,7 +14,7 @@ export function Hero({ digests }: { digests: DigestCardData[] }) {
   }, [])
 
   return (
-    <section className="relative w-screen -mx-6 overflow-hidden">
+    <section className="relative w-full overflow-hidden">
       <AnimatePresence mode="wait">
         {phase === "spiral" && (
           <motion.div
@@ -22,7 +22,7 @@ export function Hero({ digests }: { digests: DigestCardData[] }) {
             initial={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.6, ease: "easeInOut" }}
-            className="relative h-[70vh] min-h-[400px] max-h-[700px]"
+            className="relative h-[100vh] min-h-[500px]"
           >
             <SpiralAnimation onComplete={handleSpiralComplete} />
 

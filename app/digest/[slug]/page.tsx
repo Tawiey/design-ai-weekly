@@ -37,7 +37,7 @@ export default async function DigestPage({
   }
 
   return (
-    <article>
+    <article className="max-w-2xl mx-auto px-6 py-10">
       <Link
         href="/"
         className="text-sm text-neutral-500 hover:text-neutral-300 transition-colors mb-8 inline-block"
