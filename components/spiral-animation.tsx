@@ -37,12 +37,14 @@ class AnimationController {
     private readonly numberOfStars = 5000
     private readonly trailLength = 80
     private onComplete?: () => void
+    private onProgress?: (progress: number) => void
     private hasCalledComplete = false
 
-    constructor(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, dpr: number, size: number, onComplete?: () => void) {
+    constructor(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, dpr: number, size: number, onComplete?: () => void, onProgress?: (progress: number) => void) {
         this.canvas = canvas
         this.ctx = ctx
         this.onComplete = onComplete
+        this.onProgress = onProgress
         this.dpr = dpr
         this.size = size
         this.timeline = gsap.timeline({ repeat: -1 })
@@ -82,6 +84,9 @@ class AnimationController {
                 ease: "none",
                 onUpdate: () => {
                     this.render()
+                    if (this.onProgress) {
+                        this.onProgress(this.time)
+                    }
                     if (this.time >= 0.95 && !this.hasCalledComplete && this.onComplete) {
                         this.hasCalledComplete = true
                         this.onComplete()
@@ -350,7 +355,7 @@ class Star {
     }
 }
 
-export function SpiralAnimation({ onComplete }: { onComplete?: () => void }) {
+export function SpiralAnimation({ onComplete, onProgress }: { onComplete?: () => void; onProgress?: (progress: number) => void }) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const animationRef = useRef<AnimationController | null>(null)
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 })
@@ -390,7 +395,7 @@ export function SpiralAnimation({ onComplete }: { onComplete?: () => void }) {
 
         ctx.scale(dpr, dpr)
 
-        animationRef.current = new AnimationController(canvas, ctx, dpr, size, onComplete)
+        animationRef.current = new AnimationController(canvas, ctx, dpr, size, onComplete, onProgress)
 
         return () => {
             if (animationRef.current) {

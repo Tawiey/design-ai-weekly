@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { SpiralAnimation } from "./spiral-animation"
 import { LampHero } from "./lamp-hero"
@@ -8,9 +8,30 @@ import { DigestCardStack, type DigestCardData } from "./digest-card-stack"
 
 export function Hero({ digests }: { digests: DigestCardData[] }) {
   const [phase, setPhase] = useState<"spiral" | "lamp">("spiral")
+  const textRef = useRef<HTMLDivElement>(null)
 
   const handleSpiralComplete = useCallback(() => {
     setPhase("lamp")
+  }, [])
+
+  // Fade in text during the last ~25% of the spiral (progress 0.7 → 0.95)
+  const handleProgress = useCallback((progress: number) => {
+    if (!textRef.current) return
+    const fadeStart = 0.7
+    const fadeEnd = 0.92
+    if (progress < fadeStart) {
+      textRef.current.style.opacity = "0"
+      textRef.current.style.transform = "translateY(20px)"
+    } else if (progress >= fadeEnd) {
+      textRef.current.style.opacity = "1"
+      textRef.current.style.transform = "translateY(0px)"
+    } else {
+      const t = (progress - fadeStart) / (fadeEnd - fadeStart)
+      // Ease out cubic
+      const eased = 1 - Math.pow(1 - t, 3)
+      textRef.current.style.opacity = String(eased)
+      textRef.current.style.transform = `translateY(${20 * (1 - eased)}px)`
+    }
   }, [])
 
   return (
@@ -24,14 +45,21 @@ export function Hero({ digests }: { digests: DigestCardData[] }) {
             transition={{ duration: 0.6, ease: "easeInOut" }}
             className="relative h-[100vh] min-h-[500px]"
           >
-            <SpiralAnimation onComplete={handleSpiralComplete} />
+            <SpiralAnimation
+              onComplete={handleSpiralComplete}
+              onProgress={handleProgress}
+            />
 
-            {/* Title overlay on spiral */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10">
-              <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-white mb-3 text-center">
+            {/* Title overlay — starts invisible, fades in near end of spiral */}
+            <div
+              ref={textRef}
+              style={{ opacity: 0, transform: "translateY(20px)" }}
+              className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10 transition-none"
+            >
+              <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-white mb-3 text-center px-6">
                 Design × AI Weekly
               </h1>
-              <p className="text-base sm:text-lg text-neutral-400 text-center max-w-md">
+              <p className="text-base sm:text-lg text-neutral-400 text-center max-w-md px-6">
                 A curated digest at the intersection of design and artificial
                 intelligence
               </p>
