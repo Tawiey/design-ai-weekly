@@ -29,16 +29,6 @@ export default function RootLayout({
       className={`${inter.variable} ${jetbrainsMono.variable} antialiased`}
     >
       <body className="bg-neutral-950 text-neutral-100 font-sans min-h-screen">
-        <header className="border-b border-neutral-800">
-          <div className="max-w-2xl mx-auto px-6 py-4">
-            <a
-              href="/"
-              className="text-sm font-medium text-neutral-400 hover:text-neutral-100 transition-colors"
-            >
-              Design × AI Weekly
-            </a>
-          </div>
-        </header>
         <main>{children}</main>
         <footer className="border-t border-neutral-800 mt-16">
           <div className="max-w-2xl mx-auto px-6 py-6">

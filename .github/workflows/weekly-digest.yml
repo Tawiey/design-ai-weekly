@@ -1,0 +1,33 @@
+name: Weekly Digest
+
+on:
+  schedule:
+    # Friday 6:00 AM UTC = 8:00 AM SAST (UTC+2)
+    - cron: '0 6 * * 5'
+  workflow_dispatch: # allow manual runs from the GitHub UI
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r scripts/requirements.txt
+
+      - name: Run digest
+        run: python scripts/digest.py
+        env:
+          NOTION_TOKEN:       ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+          VERCEL_DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
+          RESEND_API_KEY:     ${{ secrets.RESEND_API_KEY }}
+          EMAIL_FROM:         ${{ secrets.EMAIL_FROM }}
+          EMAIL_RECIPIENT:    ${{ secrets.EMAIL_RECIPIENT }}

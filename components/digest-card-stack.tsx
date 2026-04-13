@@ -1,8 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import Link from "next/link"
+import { gradientMeshFor } from "@/lib/gradient-mesh"
+import { cn } from "@/lib/utils"
 
 export type DigestCardData = {
   id: string
@@ -11,43 +13,40 @@ export type DigestCardData = {
   dateFormatted: string
 }
 
-interface CardEntry {
-  key: number
-  digestIndex: number
-}
-
 const positionStyles = [
   { scale: 1, y: 12 },
   { scale: 0.95, y: -16 },
   { scale: 0.9, y: -44 },
 ]
 
-const exitAnimation = {
-  y: 340,
-  scale: 1,
-  zIndex: 10,
-}
-
-const enterAnimation = {
-  y: -16,
-  scale: 0.9,
+function GradientMesh({ slug }: { slug: string }) {
+  return (
+    <div
+      aria-hidden
+      className="h-full w-full rounded-lg"
+      style={{ backgroundImage: gradientMeshFor(slug) }}
+    />
+  )
 }
 
 function DigestCardContent({ digest }: { digest: DigestCardData }) {
   return (
-    <div className="flex h-full w-full flex-col justify-between p-5">
-      <div className="flex flex-col gap-2">
-        <span className="text-xs font-mono text-[var(--muted-foreground)]">
-          {digest.dateFormatted}
-        </span>
-        <h3 className="text-lg font-semibold text-[var(--foreground)] leading-snug">
-          {digest.title}
-        </h3>
+    <div className="flex h-full w-full flex-col gap-3 p-3">
+      {/* Image area */}
+      <div className="h-[170px] w-full overflow-hidden rounded-lg">
+        <GradientMesh slug={digest.slug} />
       </div>
-      <div className="flex w-full items-center justify-between gap-2 pt-4">
-        <span className="text-sm text-[var(--muted-foreground)]">
-          Weekly digest
-        </span>
+
+      {/* Content area */}
+      <div className="flex flex-1 items-end justify-between gap-3 px-2 pb-1">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <span className="text-xs font-mono text-[var(--muted-foreground)]">
+            {digest.dateFormatted}
+          </span>
+          <h3 className="truncate text-sm font-semibold text-[var(--foreground)] leading-snug">
+            {digest.title}
+          </h3>
+        </div>
         <Link
           href={`/digest/${digest.slug}`}
           className="flex h-10 shrink-0 items-center gap-0.5 rounded-full bg-[var(--foreground)] pl-4 pr-3 text-sm font-medium text-[var(--background)] transition-opacity hover:opacity-90"
@@ -71,31 +70,45 @@ function DigestCardContent({ digest }: { digest: DigestCardData }) {
 }
 
 function AnimatedCard({
-  card,
   digest,
   index,
-  isAnimating,
+  direction,
+  cardKey,
 }: {
-  card: CardEntry
   digest: DigestCardData
   index: number
-  isAnimating: boolean
+  direction: "next" | "prev"
+  cardKey: string
 }) {
   const { scale, y } = positionStyles[index] ?? positionStyles[2]
-  const zIndex = index === 0 && isAnimating ? 10 : 3 - index
+  const zIndex = 3 - index
 
-  const exitAnim = index === 0 ? exitAnimation : undefined
-  const initialAnim = index === 2 ? enterAnimation : undefined
+  // Direction-aware exit & enter animations
+  // Next: top card slides DOWN off-screen, new back card appears scaled in from above
+  // Prev: top card slides UP off-screen, returning card appears from above (scale 0.85)
+  const exitAnim =
+    index === 0
+      ? direction === "next"
+        ? { y: 340, scale: 1, zIndex: 10 }
+        : { y: -340, scale: 1, zIndex: 10, opacity: 0 }
+      : undefined
+
+  const initialAnim =
+    index === 2
+      ? direction === "next"
+        ? { y: -16, scale: 0.9 }
+        : { y: -16, scale: 0.9, opacity: 0 }
+      : undefined
 
   return (
     <motion.div
-      key={card.key}
+      key={cardKey}
       initial={initialAnim}
-      animate={{ y, scale }}
+      animate={{ y, scale, opacity: 1 }}
       exit={exitAnim}
       transition={{
         type: "spring",
-        duration: 1,
+        duration: 0.7,
         bounce: 0,
       }}
       style={{
@@ -104,7 +117,7 @@ function AnimatedCard({
         x: "-50%",
         bottom: 0,
       }}
-      className="absolute flex h-[200px] w-[324px] items-center justify-center overflow-hidden rounded-t-xl border-x border-t border-[var(--border)] bg-[var(--card)] p-1 shadow-lg will-change-transform sm:w-[480px]"
+      className="absolute flex h-[300px] w-[324px] items-center justify-center overflow-hidden rounded-t-xl border-x border-t border-[var(--border)] bg-[var(--card)] shadow-lg will-change-transform sm:w-[480px]"
     >
       <DigestCardContent digest={digest} />
     </motion.div>
@@ -112,68 +125,119 @@ function AnimatedCard({
 }
 
 export function DigestCardStack({ digests }: { digests: DigestCardData[] }) {
-  const [nextKey, setNextKey] = useState(digests.length)
-  const [isAnimating, setIsAnimating] = useState(false)
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [direction, setDirection] = useState<"next" | "prev">("next")
 
-  // Build initial visible card entries (up to 3)
-  const [visibleCards, setVisibleCards] = useState<CardEntry[]>(() =>
-    digests.slice(0, 3).map((_, i) => ({ key: i, digestIndex: i }))
-  )
+  const total = digests.length
+  const canGoPrev = currentIndex > 0
+  const canGoNext = currentIndex < total - 1
 
-  const handleNext = () => {
-    if (isAnimating || digests.length <= 1) return
-    setIsAnimating(true)
+  const handleNext = useCallback(() => {
+    setCurrentIndex((i) => {
+      if (i >= total - 1) return i
+      setDirection("next")
+      return i + 1
+    })
+  }, [total])
 
-    const nextDigestIndex =
-      ((visibleCards[visibleCards.length - 1]?.digestIndex ?? 0) + 1) % digests.length
+  const handlePrev = useCallback(() => {
+    setCurrentIndex((i) => {
+      if (i <= 0) return i
+      setDirection("prev")
+      return i - 1
+    })
+  }, [])
 
-    setVisibleCards([
-      ...visibleCards.slice(1),
-      { key: nextKey, digestIndex: nextDigestIndex },
-    ])
-    setNextKey((prev) => prev + 1)
+  // Keyboard navigation
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight") {
+        e.preventDefault()
+        handleNext()
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault()
+        handlePrev()
+      }
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [handleNext, handlePrev])
 
-    // Reset animating state after spring finishes
-    setTimeout(() => setIsAnimating(false), 100)
-  }
+  if (total === 0) return null
 
-  if (digests.length === 0) return null
+  // Build the visible card window — up to 3 cards starting from currentIndex
+  const visibleCards = digests.slice(currentIndex, currentIndex + 3)
 
   return (
     <div className="flex w-full flex-col items-center justify-center pt-2">
-      <div className="relative h-[280px] w-full overflow-hidden sm:w-[544px]">
-        <AnimatePresence initial={false}>
-          {visibleCards.slice(0, 3).map((card, index) => (
+      <div className="relative h-[320px] w-full overflow-hidden sm:w-[544px]">
+        <AnimatePresence initial={false} mode="popLayout">
+          {visibleCards.map((digest, index) => (
             <AnimatedCard
-              key={card.key}
-              card={card}
-              digest={digests[card.digestIndex]}
+              key={digest.id}
+              cardKey={digest.id}
+              digest={digest}
               index={index}
-              isAnimating={isAnimating}
+              direction={direction}
             />
           ))}
         </AnimatePresence>
       </div>
 
-      {digests.length > 1 && (
-        <div className="relative z-10 -mt-px flex w-full items-center justify-center border-t border-[var(--border)] py-4">
-          <button
-            onClick={handleNext}
-            className="flex h-9 cursor-pointer select-none items-center justify-center gap-1.5 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--background)] px-4 text-sm font-medium text-[var(--foreground)] transition-all hover:bg-[var(--secondary)] active:scale-[0.98]"
-          >
-            Next issue
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="square"
+      {total > 1 && (
+        <div className="relative z-10 -mt-px flex w-full flex-col items-center gap-2 border-t border-[var(--border)] py-4">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handlePrev}
+              disabled={!canGoPrev}
+              aria-label="Previous issue"
+              className={cn(
+                "flex h-9 select-none items-center justify-center gap-1.5 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--background)] px-4 text-sm font-medium text-[var(--foreground)] transition-all hover:bg-[var(--secondary)] active:scale-[0.98]",
+                !canGoPrev && "cursor-not-allowed opacity-40 hover:bg-[var(--background)]"
+              )}
             >
-              <path d="M6 9L12 15L18 9" />
-            </svg>
-          </button>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="square"
+              >
+                <path d="M15 18L9 12L15 6" />
+              </svg>
+              Previous
+            </button>
+            <span className="font-mono text-xs text-[var(--muted-foreground)]">
+              {currentIndex + 1} / {total}
+            </span>
+            <button
+              onClick={handleNext}
+              disabled={!canGoNext}
+              aria-label="Next issue"
+              className={cn(
+                "flex h-9 select-none items-center justify-center gap-1.5 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--background)] px-4 text-sm font-medium text-[var(--foreground)] transition-all hover:bg-[var(--secondary)] active:scale-[0.98]",
+                !canGoNext && "cursor-not-allowed opacity-40 hover:bg-[var(--background)]"
+              )}
+            >
+              Next
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="square"
+              >
+                <path d="M9 18L15 12L9 6" />
+              </svg>
+            </button>
+          </div>
+          <p className="font-mono text-[10px] uppercase tracking-wider text-[var(--muted-foreground)] opacity-60">
+            Use ← → keys to navigate
+          </p>
         </div>
       )}
     </div>
