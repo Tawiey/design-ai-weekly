@@ -203,7 +203,7 @@ def _digest_blocks(curated: dict) -> list[dict]:
             "type": "callout",
             "callout": {
                 "rich_text": [{"type": "text", "text": {"content": curated["intro"]}}],
-                "icon": {"type": "emoji", "emoji": "✦"},
+                "icon": {"type": "emoji", "emoji": "📌"},
                 "color": "gray_background",
             },
         })
@@ -289,6 +289,8 @@ def publish_to_notion(title: str, curated: dict) -> str:
         json=payload,
         timeout=30,
     )
+    if not resp.ok:
+        raise RuntimeError(f"Notion API error {resp.status_code}: {resp.text}")
     resp.raise_for_status()
     page = resp.json()
     page_id = page["id"]
