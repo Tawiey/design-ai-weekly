@@ -25,6 +25,7 @@ jobs:
       - name: Run digest
         run: python scripts/digest.py
         env:
+          OPENAI_API_KEY:     ${{ secrets.OPENAI_API_KEY }}
           NOTION_TOKEN:       ${{ secrets.NOTION_TOKEN }}
           NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
           VERCEL_DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}

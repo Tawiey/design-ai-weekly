@@ -1,5 +1,8 @@
 import os
 
+# OpenAI — used for article curation
+OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
+
 # Resend email settings
 RESEND_API_KEY  = os.environ["RESEND_API_KEY"]
 EMAIL_FROM      = os.environ["EMAIL_FROM"]       # e.g. "Design × AI Weekly <digest@yourdomain.com>"
